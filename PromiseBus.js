@@ -9,16 +9,16 @@ function PromiseBus(name) {
 
 /**
  * The equivalent of EventEmitter's `on`
- * @param {string} [name] The name of the current worker. Taken from `worker.name` if unspecified. Must be unique; will overwrite the old worker with this name if it isn't
- * @param {Array.<string>} dependencies The list of workers on this event that this worker depends on
- * @param {function} worker The worker. Will be supplied the event's arguments first, then its dependencies as arguments
+ * @param {string} [name] The name of the current task. Taken from `task.name` if unspecified. Must be unique; will overwrite the old task with this name if it isn't
+ * @param {Array.<string>} dependencies The list of tasks on this event that this task depends on
+ * @param {function} task The task. Will be supplied the event's arguments first, then its dependencies as arguments
  * @return {this}
  */
-PromiseBus.prototype.register = function(name, dependencies, worker) {
-  if (!worker) {
-    worker = dependencies;
+PromiseBus.prototype.register = function(name, dependencies, task) {
+  if (!task) {
+    task = dependencies;
     dependencies = name;
-    name = worker.name;
+    name = task.name;
   }
 
   if (_.isEmpty(name)) {
@@ -28,7 +28,7 @@ PromiseBus.prototype.register = function(name, dependencies, worker) {
   this.bus[name] = {
     name: name,
     dependencies: dependencies,
-    worker: worker
+    fn: task
   };
 
   return this;
@@ -36,7 +36,7 @@ PromiseBus.prototype.register = function(name, dependencies, worker) {
 
 /**
  * The equivalent of EventEmitter's `removeListener`
- * @param {string} name The worker to unregister
+ * @param {string} name The task to unregister
  * @return {this}
  */
 PromiseBus.prototype.unregister = function(name) {
@@ -46,15 +46,15 @@ PromiseBus.prototype.unregister = function(name) {
 
 /**
  * The equivalent of EventEmitter's `listeners`
- * @return {Object.<string,{dependencies: Array.<string>, worker: function}>}
+ * @return {Object.<string,{dependencies: Array.<string>, task: function}>}
  */
-PromiseBus.prototype.workers = function() {
+PromiseBus.prototype.tasks = function() {
   return this.bus || {};
 };
 
 /**
  * The equivalent of EventEmitter's `emit`
- * @param {...?} args Optional additional arguments for the workers
+ * @param {...?} args Optional additional arguments for the tasks
  * @return {Promise.<Object.<string, ?>>} returns a promise for the results
  */
 PromiseBus.prototype.run = function() {
@@ -63,20 +63,20 @@ PromiseBus.prototype.run = function() {
 };
 
 /**
- * Run a single worker, with its dependencies. Doesn't run unrelated workers.
- * @param {string} name The worker to run
- * @param {...?} args Optional additional arguments for the worker
+ * Run a single task, with its dependencies. Doesn't run unrelated tasks.
+ * @param {string} name The task to run
+ * @param {...?} args Optional additional arguments for the task
  * @return {Promise.<?>} returns a promise for the results
  */
-PromiseBus.prototype.runWorker = function(name) {
+PromiseBus.prototype.runTask = function(name) {
   var args = Array.prototype.slice.call(arguments, 1);
 
-  var relevantWorkers = function(bus, name) {
+  var relevantTasks = function(bus, name) {
     return Array.prototype.concat.apply(
-      [name], _.map(bus[name].dependencies, _.partial(relevantWorkers, bus)));
+      [name], _.map(bus[name].dependencies, _.partial(relevantTasks, bus)));
   };
 
-  var bus = _.pick(this.bus, relevantWorkers(this.bus, name));
+  var bus = _.pick(this.bus, relevantTasks(this.bus, name));
 
   var promises = this._buildGraph.apply(this, [bus].concat(args));
   return promises[name];
@@ -84,7 +84,7 @@ PromiseBus.prototype.runWorker = function(name) {
 
 // this function synchronously builds the promise chain as
 // specified by the dependency information. It uses the string keys of
-// the given workers to late-bind promises to each other's `.then`
+// the given tasks to late-bind promises to each other's `.then`
 // functions.
 PromiseBus.prototype._buildGraph = function(bus) {
   var args = Array.prototype.slice.call(arguments, 1);
@@ -105,7 +105,7 @@ PromiseBus.prototype._buildGraph = function(bus) {
       if (!task.built && _.all(_.at(results, task.dependencies)))  {
         results[name] = Promise.props(_.pick(results, task.dependencies))
           .then(function(values) {
-            return task.worker.apply(null, args.concat([values]));
+            return task.fn.apply(null, args.concat([values]));
           });
 
         task.built = true;

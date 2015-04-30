@@ -61,10 +61,10 @@ bus.run(5).then(function(mog) {
 });
 ```
 
-Or, we could run only one such worker.
+Or, we could run only one such task.
 
 ```javascript
-bus.runWorker('adoptionProbability', 6).then(function(probability) {
+bus.runTask('adoptionProbability', 6).then(function(probability) {
   if (probability > 0.5) {
     console.debug('Guys, this should be an easy one, why is it still around?')
   }
@@ -77,23 +77,23 @@ And our mogs go happy to good homes.
 
 # API Reference
 
-`PromiseBus#register()` Registers a worker to run on the bus.
-- `name`, String naming this worker. Optional, but if it isn't specified then function.name will be used instead.
-- `dependencies`, Array of Strings listing the workers this worker depends on
-- `worker`, Function implementing the worker itself. Will be passed the event's arguments, then its dependencies.
+`PromiseBus#register()` Registers a task to run on the bus.
+- `name`, String naming this task. Optional, but if it isn't specified then function.name will be used instead.
+- `dependencies`, Array of Strings listing the tasks this task depends on
+- `task`, Function implementing the task itself. Will be passed the event's arguments, then its dependencies.
 - Returns the `PromiseBus` instance for chaining.
 
-`PromiseBus#unregister()` Unregisters an existing worker.
-- `name`, Name of the worker to unregister
+`PromiseBus#unregister()` Unregisters an existing task.
+- `name`, Name of the task to unregister
 - Returns the `PromiseBus` instance for chaining.
 
-`PromiseBus#workers()` The list of workers on the bus
-- Returns an object of the form `{ name: { dependencies, worker } }`
+`PromiseBus#tasks()` The list of tasks on the bus
+- Returns an object of the form `{ name: { dependencies, task } }`
 
-`PromiseBus#run()` Run the bus's workers
-- `args`, Arguments to pass to the workers
+`PromiseBus#run()` Run the bus's tasks
+- `args`, Arguments to pass to the tasks
 - Returns a Promise for an object of the form `{ name: return value }`
 
-`PromiseBus#runWorker()` Run a specific worker (and its dependencies). Does not run disconnected workers.
-- `name`, The worker to run
-- `args`, Arguments to pass to the workers
+`PromiseBus#runTask()` Run a specific task (and its dependencies). Does not run disconnected tasks.
+- `name`, The task to run
+- `args`, Arguments to pass to the tasks
