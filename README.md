@@ -19,11 +19,11 @@ Given a mog, we can go fetch its name from the database and take its
 picture with a camera we have set up in the enclosure.
 
 ```javascript
-bus.register([], function name(eid) {
+bus.register('name', [], function(eid) {
   return knex.select('name').from('mogs').where({ enclosure_id: eid });
 })
 
-bus.register([], function picture(eid) {
+bus.register('picture', [], function(eid) {
   return cameras[eid].takePicture();
 });
 ```
@@ -33,17 +33,17 @@ its name and age, we can estimate how likely someone is to
 adopt it.
 
 ```javascript
-bus.register(['picture'], function age(eid, data) {
+bus.register('age', ['picture'], function(eid, data) {
   return estimateAgeByFacialProportions(data.picture);
 });
 
-bus.register(['picture'], function gender(eid, data) {
+bus.register('gender', ['picture'], function(eid, data) {
   // mogs are highly gender-normative
   var colour = getPredominantColour(data.picture);
   return colour === 'pink' ? 'female' : 'male';
 });
 
-bus.register(['name', 'age'], function adoptionProbability(eid, data) {
+bus.register('adoptionProbability', ['name', 'age'], function(eid, data) {
   return data.age < 2 || data.name.match(/fluff/) ? 0.9 : 0.2;
 });
 ```
@@ -68,7 +68,7 @@ And our mogs go happy to good homes.
 # API Reference
 
 `PromiseBus#register` Registers a worker to run on the bus.
-- `name`, String naming this worker. Optional, but then has to be specified in the function's name.
+- `name`, String naming this worker. Optional, but if it isn't specified then function.name will be used instead.
 - `dependencies`, Array of Strings listing the workers this worker depends on
 - `worker`, Function implementing the worker itself. Will be passed the event's arguments, then its dependencies.
 - Returns the `PromiseBus` instance for chaining.
