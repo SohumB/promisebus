@@ -1,20 +1,20 @@
 var Promise = require('bluebird');
 var _ = require('lodash');
 
-function PromiseBus() {
+function PromiseBus(name) {
+  this.name = name || 'promisebus' + Math.floor(Math.random() * 65536);
   this.bus = {};
   return this;
 }
 
 /**
  * The equivalent of EventEmitter's `on`
- * @param {string} event The event to register this worker on
  * @param {string} [name] The name of the current worker. Taken from `worker.name` if unspecified. Must be unique; will overwrite the old worker with this name if it isn't
  * @param {Array.<string>} dependencies The list of workers on this event that this worker depends on
  * @param {function} worker The worker. Will be supplied the event's arguments first, then its dependencies as arguments
  * @return {this}
  */
-PromiseBus.prototype.register = function(event, name, dependencies, worker) {
+PromiseBus.prototype.register = function(name, dependencies, worker) {
   if (!worker) {
     worker = dependencies;
     dependencies = name;
@@ -25,11 +25,7 @@ PromiseBus.prototype.register = function(event, name, dependencies, worker) {
     throw new Error('Empty name not allowed');
   }
 
-  if (!this.bus[event]) {
-    this.bus[event] = {};
-  }
-
-  this.bus[event][name] = {
+  this.bus[name] = {
     name: name,
     dependencies: dependencies,
     worker: worker
@@ -40,30 +36,24 @@ PromiseBus.prototype.register = function(event, name, dependencies, worker) {
 
 /**
  * The equivalent of EventEmitter's `removeListener`
- * @param {string} event The event to unregister from
  * @param {string} name The worker to unregister
  * @return {this}
  */
-PromiseBus.prototype.unregister = function(event, name) {
-  if (this.bus[event]) {
-    delete this.bus[event][name];
-  }
-
+PromiseBus.prototype.unregister = function(name) {
+  delete this.bus[name];
   return this;
 };
 
 /**
  * The equivalent of EventEmitter's `listeners`
- * @param {string} event The event to get the hash of workers for
  * @return {Object.<string,{dependencies: Array.<string>, worker: function}>}
  */
-PromiseBus.prototype.workers = function(event) {
-  return this.bus[event] || {};
+PromiseBus.prototype.workers = function() {
+  return this.bus || {};
 };
 
 /**
  * The equivalent of EventEmitter's `emit`
- * @param {string} event The event to run
  * @param {...?} args Optional additional arguments for the workers
  * @return {Promise.<Object.<string, ?>>} returns a promise for the results
  */
@@ -75,9 +65,9 @@ PromiseBus.prototype.run = function() {
 // specified by the dependency information. It uses the string keys of
 // the given workers to late-bind promises to each other's `.then`
 // functions.
-PromiseBus.prototype._buildGraph = function(event) {
-  var args = Array.prototype.slice.call(arguments, 1);
-  var tasks = _.cloneDeep(this.bus[event]);
+PromiseBus.prototype._buildGraph = function() {
+  var args = Array.prototype.slice.call(arguments, 0);
+  var tasks = _.cloneDeep(this.bus);
 
   var results = {};
   var undone = _.keys(tasks).length;
@@ -106,7 +96,7 @@ PromiseBus.prototype._buildGraph = function(event) {
     // waiting on something else
     if (undone === lastUndone) {
       var unbuilt = _(tasks).reject('built').map('name').value();
-      throw new Error('Unsatisfiable dependency graph found for event ' + event +
+      throw new Error('Unsatisfiable dependency graph found for promisebus ' + this.name +
                       ' (unresolved tasks: ' + unbuilt.join(', ') + ')');
     }
 
