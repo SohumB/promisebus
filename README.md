@@ -58,7 +58,17 @@ bus.run(5).then(function(mog) {
   if (mog.adoptionProbability < 0.5) {
     console.debug("We totally didn't call this one.")
   }
-})
+});
+```
+
+Or, we could run only one such worker.
+
+```javascript
+bus.runWorker('adoptionProbability', 6).then(function(probability) {
+  if (probability > 0.5) {
+    console.debug('Guys, this should be an easy one, why is it still around?')
+  }
+});
 ```
 
 And our mogs go happy to good homes.
@@ -67,19 +77,23 @@ And our mogs go happy to good homes.
 
 # API Reference
 
-`PromiseBus#register` Registers a worker to run on the bus.
+`PromiseBus#register()` Registers a worker to run on the bus.
 - `name`, String naming this worker. Optional, but if it isn't specified then function.name will be used instead.
 - `dependencies`, Array of Strings listing the workers this worker depends on
 - `worker`, Function implementing the worker itself. Will be passed the event's arguments, then its dependencies.
 - Returns the `PromiseBus` instance for chaining.
 
-`PromiseBus#unregister` Unregisters an existing worker.
+`PromiseBus#unregister()` Unregisters an existing worker.
 - `name`, Name of the worker to unregister
 - Returns the `PromiseBus` instance for chaining.
 
-`PromiseBus#workers` The list of workers on the bus
+`PromiseBus#workers()` The list of workers on the bus
 - Returns an object of the form `{ name: { dependencies, worker } }`
 
-`PromiseBus#run` Run the bus's workers.
+`PromiseBus#run()` Run the bus's workers
 - `args`, Arguments to pass to the workers
 - Returns a Promise for an object of the form `{ name: return value }`
+
+`PromiseBus#runWorker()` Run a specific worker (and its dependencies). Does not run disconnected workers.
+- `name`, The worker to run
+- `args`, Arguments to pass to the workers

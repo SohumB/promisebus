@@ -58,16 +58,37 @@ PromiseBus.prototype.workers = function() {
  * @return {Promise.<Object.<string, ?>>} returns a promise for the results
  */
 PromiseBus.prototype.run = function() {
-  return Promise.props(this._buildGraph.apply(this, arguments));
+  var args = Array.prototype.slice.call(arguments, 0);
+  return Promise.props(this._buildGraph.apply(this, [this.bus].concat(args)));
+};
+
+/**
+ * Run a single worker, with its dependencies. Doesn't run unrelated workers.
+ * @param {string} name The worker to run
+ * @param {...?} args Optional additional arguments for the worker
+ * @return {Promise.<?>} returns a promise for the results
+ */
+PromiseBus.prototype.runWorker = function(name) {
+  var args = Array.prototype.slice.call(arguments, 1);
+
+  var relevantWorkers = function(bus, name) {
+    return Array.prototype.concat.apply(
+      [name], _.map(bus[name].dependencies, _.partial(relevantWorkers, bus)));
+  };
+
+  var bus = _.pick(this.bus, relevantWorkers(this.bus, name));
+
+  var promises = this._buildGraph.apply(this, [bus].concat(args));
+  return promises[name];
 };
 
 // this function synchronously builds the promise chain as
 // specified by the dependency information. It uses the string keys of
 // the given workers to late-bind promises to each other's `.then`
 // functions.
-PromiseBus.prototype._buildGraph = function() {
-  var args = Array.prototype.slice.call(arguments, 0);
-  var tasks = _.cloneDeep(this.bus);
+PromiseBus.prototype._buildGraph = function(bus) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  var tasks = _.cloneDeep(bus);
 
   var results = {};
   var undone = _.keys(tasks).length;

@@ -138,4 +138,32 @@ describe('PromiseBus', function() {
       state2.should.eventually.equal(state1)
     ]);
   });
+
+  it('can run a single worker, and its dependencies, without running disconnected workers', function() {
+    var bus = new Bus();
+
+    var worker1 = sinon.stub().resolves(1);
+    var worker2 = sinon.stub().resolves(2);
+    var worker3 = sinon.stub().resolves(3);
+    var worker4 = sinon.stub().resolves(4);
+    var worker5 = sinon.stub().resolves(5);
+
+    bus.register('w1', [], worker1);
+    bus.register('w2', [], worker2);
+    bus.register('w3', ['w1', 'w2'], worker3);
+    bus.register('w4', [], worker4);
+    bus.register('w5', ['w4'], worker5);
+
+    var run = bus.runWorker('w3', 0);
+    return Promise.all([
+      run.should.eventually.deep.equal(3),
+      run.then(function() {
+        worker1.should.have.been.calledWith(0, {});
+        worker2.should.have.been.calledWith(0, {});
+        worker3.should.have.been.calledWith(0, { w1: 1, w2: 2 });
+        worker4.should.have.callCount(0);
+        worker5.should.have.callCount(0);
+      })
+    ]);
+  });
 });
