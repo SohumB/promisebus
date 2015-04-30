@@ -63,24 +63,40 @@ PromiseBus.prototype.run = function() {
 };
 
 /**
- * Run a single task, with its dependencies. Doesn't run unrelated tasks.
- * @param {string} name The task to run
+ * Run specified tasks, with their dependencies. Doesn't run unrelated tasks.
+ * @param {Array<string>} names The tasks to run
+ * @param {...?} args Optional additional arguments for the task
+ * @return {Promise.<Object.<string, ?>>} returns a promise for the results
+ */
+PromiseBus.prototype.runTasks = function(names) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  if (_.isString(names)) { names = [names]; }
+
+  var relevantTasks = function(bus, names) {
+    if (names.length === 0) { return []; }
+
+    var deps = Array.prototype.concat.apply(
+      [], _.map(names, function(name) { return bus[name].dependencies; }));
+
+    return names.concat(relevantTasks(bus, _.uniq(deps)));
+  };
+
+  var bus = _.pick(this.bus, relevantTasks(this.bus, names));
+
+  var promises = this._buildGraph.apply(this, [bus].concat(args));
+  return Promise.props(_.pick(promises, names));
+};
+
+/**
+ * Run specified task, with its dependencies. Doesn't run unrelated tasks.
+ * @param {Array<string>} name The task to run
  * @param {...?} args Optional additional arguments for the task
  * @return {Promise.<?>} returns a promise for the results
  */
 PromiseBus.prototype.runTask = function(name) {
-  var args = Array.prototype.slice.call(arguments, 1);
-
-  var relevantTasks = function(bus, name) {
-    return Array.prototype.concat.apply(
-      [name], _.map(bus[name].dependencies, _.partial(relevantTasks, bus)));
-  };
-
-  var bus = _.pick(this.bus, relevantTasks(this.bus, name));
-
-  var promises = this._buildGraph.apply(this, [bus].concat(args));
-  return promises[name];
+  return this.runTasks.apply(this, arguments).get(name);
 };
+
 
 // this function synchronously builds the promise chain as
 // specified by the dependency information. It uses the string keys of

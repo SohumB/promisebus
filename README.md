@@ -91,9 +91,13 @@ And our mogs go happy to good homes.
 - Returns an object of the form `{ name: { dependencies, task } }`
 
 `PromiseBus#run()` Run the bus's tasks
-- `args`, Arguments to pass to the tasks
+- `...args`, Arguments to pass to the tasks
 - Returns a Promise for an object of the form `{ name: return value }`
 
 `PromiseBus#runTask()` Run a specific task (and its dependencies). Does not run disconnected tasks.
 - `name`, The task to run
-- `args`, Arguments to pass to the tasks
+- `...args`, Arguments to pass to the tasks
+
+`PromiseBus#runTasks()` Plural form of the above.
+- `names`, Array with names of tasks to run
+- `...args`, Arguments to pass to the tasks

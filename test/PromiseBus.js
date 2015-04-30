@@ -166,4 +166,40 @@ describe('PromiseBus', function() {
       })
     ]);
   });
+
+  it('can run multiple tasks, with their dependencies, without running disconnected tasks, sharing promises', function() {
+    var bus = new Bus();
+
+    var task1 = sinon.stub().resolves(1);
+    var task2 = sinon.stub().resolves(2);
+    var task3 = sinon.stub().resolves(3);
+    var task4 = sinon.stub().resolves(4);
+    var task5 = sinon.stub().resolves(5);
+    var task6 = sinon.stub().resolves(6);
+    var task7 = sinon.stub().resolves(7);
+
+    bus.register('t1', [], task1);
+    bus.register('t2', [], task2);
+    bus.register('t3', ['t1', 't2'], task3);
+    bus.register('t4', [], task4);
+    bus.register('t5', ['t4'], task5);
+    bus.register('t6', ['t7'], task6);
+    bus.register('t7', [], task7);
+
+    var run = bus.runTasks(['t3', 't6', 't1'], 0);
+    return Promise.all([
+      run.should.eventually.deep.equal({ t1: 1, t3: 3, t6: 6 }),
+      run.then(function() {
+        task1.should.have.been.calledWith(0, {});
+        task2.should.have.been.calledWith(0, {});
+        task3.should.have.been.calledWith(0, { t1: 1, t2: 2 });
+        task4.should.have.callCount(0);
+        task5.should.have.callCount(0);
+        task6.should.have.been.calledWith(0, { t7: 7 });
+        task7.should.have.been.calledWith(0, {});
+
+        task1.should.have.callCount(1);
+      })
+    ]);
+  });
 });
