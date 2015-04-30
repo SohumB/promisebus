@@ -1,6 +1,6 @@
 {
   "name": "promisebus",
-  "version": "0.9.2",
+  "version": "1.0.0",
   "description": "An EventEmitter like interface for promise chaining. Supports dependency tracking.",
   "main": "PromiseBus.js",
   "repository": {
